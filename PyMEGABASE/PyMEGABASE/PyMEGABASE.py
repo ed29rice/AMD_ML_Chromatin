@@ -802,7 +802,7 @@ class PyMEGABASE:
         #To train, we exclude the centromers and B4 subcompartments
         ndx=(all_averages[0,:]!=6) * (all_averages[0,:]!=5)
         all_averages=all_averages[:,ndx]
-        all_averages=all_averages+1
+        all_averages=all_averages
         return all_averages
 
     def get_tmatrix(self,chrms,silent=False):

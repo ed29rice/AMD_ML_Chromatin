@@ -1016,7 +1016,7 @@ class PyMEGABASE:
             ave_reps=np.mean(reps,axis=0)
             all_averages.append(ave_reps)
         all_averages=np.array(all_averages)
-        chr_averages=self.build_state_vector(int_types,all_averages)-1
+        chr_averages=self.build_state_vector(int_types,all_averages)
         return chr_averages[1:]
 
     def prediction_single_chrom(self,chr=1,h_and_J_file=None,energies=False,probabilities=False):

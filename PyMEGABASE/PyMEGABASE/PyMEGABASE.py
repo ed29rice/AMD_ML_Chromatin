@@ -851,7 +851,7 @@ class PyMEGABASE:
                 except:
                     if silent==False:print(i,' failed with at least one chromosome')
             reps=np.array(reps)
-            ave_reps=np.round(np.mean(reps,axis=0))
+            ave_reps=np.mean(reps,axis=0)
             all_averages.append(ave_reps)
         #Build state vectors of the Potts model for training
         all_averages=np.array(all_averages)
@@ -1013,11 +1013,11 @@ class PyMEGABASE:
                 except:
                     if silent==False:print(i,' failed with at least one chromosome')
             reps=np.array(reps)
-            ave_reps=np.round(np.mean(reps,axis=0))
+            ave_reps=np.mean(reps,axis=0)
             all_averages.append(ave_reps)
         all_averages=np.array(all_averages)
         chr_averages=self.build_state_vector(int_types,all_averages)-1
-        return chr_averages[1:]+1
+        return chr_averages[1:]
 
     def prediction_single_chrom(self,chr=1,h_and_J_file=None,energies=False,probabilities=False):
         R"""

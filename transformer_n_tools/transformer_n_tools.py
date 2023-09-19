@@ -1,10 +1,6 @@
 # Copyright (c) 2020-2023 The Center for Theoretical Biological Physics (CTBP) - Rice University
 # This file is from the Open-MiChroM project, released under the MIT License. 
 
-R"""  
-The :class:`~.PyMEGABASE` classes perform subcompartment and compartment annotations based on 1D chromatin enrichment profiles.
-"""
-
 import os, glob, requests, shutil, urllib, gzip, math
 from scipy import stats
 import numpy as np
@@ -18,50 +14,10 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from torch.nn import functional as F
 
 class PyMEGABASE:
-    R"""
-    The :class:`~.PyMEGABASE` class performs genomic annotations .
-    
-    The :class:`~.PyMEGABASE` sets the environment to generate prediction of genomic annotations.
-    
-    Args:
-        cell_line (str, required): 
-            Name of target cell type
-        assembly (str, required): 
-            Reference assembly of target cell line ('hg19','GRCh38','mm10')
-        organism (str, required): 
-            Target cell type organism (str, required):
-        signal_type (str, required): 
-            Input files signal type ('signal p-value', 'fold change over control', ...)
-        ref_cell_line_path (str, optional): 
-            Folder/Path to place reference/training data ('tmp_meta')
-        cell_line_path (str, optional): 
-            Folder/Path to place target cell data 
-        types_path (str, optional): 
-            Folder/Path where the genomic annotations are located 
-        histones (bool, required): 
-            Whether to use Histone Modification data from the ENCODE databank for prediction
-        tf (bool, required): 
-            Whether to use Transcription Factor data from the ENCODE databank for prediction
-        small_rna (bool, required): 
-            Whether to use Small RNA-Seq data from the ENCODE databank for prediction
-        total_rna (bool, required): 
-            Whether to use Total RNA-seq data from the ENCODE databank for prediction
-        n_states (int, optional): 
-            Number of states for the D-nodes 
-        extra_filter (str, optional):
-            Add filter to the fetching data url to download cell type data
-        res (int, optional):
-            Resolution for genomic annotations calling in kilobasepairs (5, 50, 100)
-        chromosome_sizes (list, optional):
-            Chromosome sizes based on the reference genome assembly - required for non-human assemblies
-        file_format (str, optional):
-            File format for the input data
-    """
     def __init__(self, cell_line='GM12878', assembly='hg19',organism='human',signal_type='signal p-value',file_format='bigWig',
                 ref_cell_line_path='tmp_meta',cell_line_path=None,types_path=None,
                 histones=True,tf=False,atac=False,small_rna=False,total_rna=False,n_states=19,
                 extra_filter='',res=50,chromosome_sizes=None,AB=False):
-        self.printHeader()
         pt = os.path.dirname(os.path.realpath(__file__))
         self.path_to_share = os.path.join(pt,'share/')
         self.cell_line=cell_line
@@ -154,11 +110,6 @@ class PyMEGABASE:
         self.es_unique=[]   
         for e in self.experiments_unique:
             self.es_unique.append(e.split('-human')[0])
-        #Summary of input 
-        print('Selected cell line to predict: '+self.cell_line)
-        print('Selected assembly: '+self.assembly)
-        print('Selected signal type: '+self.signal_type)
-        print('Selected organism: '+self.organism)
 
     def process_replica_bw(self,line,cell_line_path,chrm_size):
         R"""
@@ -957,6 +908,30 @@ class PyMEGABASE:
         chr_averages=self.build_state_vector(int_types,all_averages)
         return chr_averages[1:]
 
+    def training_data(self,n_neigbors=2,train_per=0.8):
+        tmp_all_matrix=self.get_tmatrix(range(1,23))
+        nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
+        #Populate data with neighbor information
+        tmp=[]
+        for l in range(n_neigbors,len(tmp_all_matrix[0])-n_neigbors):
+            tmp.append(np.insert(np.concatenate(tmp_all_matrix[nfeatures*2+1:nfeatures*3+1,l-n_neigbors:l+n_neigbors+1].T),0,tmp_all_matrix[0,l]))
+        all_matrix=np.array(tmp).T
+        #Segment data between train, test and valiation sets
+        tidx=np.random.choice(np.linspace(0,len(all_matrix[0])-1,len(all_matrix[0])).astype(int),size=int(train_per*len(all_matrix[0])),replace=False)
+        ttidx=np.zeros(len(all_matrix[0])).astype(bool)
+        ttidx[tidx]=1
+
+        tmatrix=all_matrix[:,ttidx]
+        vmatrix=all_matrix[:,~ttidx][:,::2]
+        testmatrix=all_matrix[:,~ttidx][:,1::2]
+
+        train_set=tmatrix.T
+        validation_set=vmatrix.T
+        test_set=testmatrix.T
+
+        return train_set, validation_set, test_set
+
+
     def printHeader(self):
         print('{:^96s}'.format("****************************************************************************************"))
         print('{:^96s}'.format("**** *** *** *** *** *** *** *** PyMEGABASE-1.0.0 *** *** *** *** *** *** *** ****"))
@@ -997,7 +972,7 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:,:x.size(1)]
         return self.dropout(x)
 
-class TransformerModel(nn.Module):
+class TransformerModel_c(nn.Module):
     def __init__(self, d_model: int, nhead: int, d_hid: int,
                 nlayers: int, features: int, ostates: int, dropout: float = 0.5):
         super().__init__()
@@ -1026,6 +1001,42 @@ class TransformerModel(nn.Module):
     def forward(self, src: Tensor, src_mask: Tensor) -> Tensor:
         src = self.encoder(src) * math.sqrt(self.d_model)
         src = self.pos_encoder(src)
+        output_tf = self.transformer_encoder(src, src_mask)
+        output = self.fl(output_tf)
+        output = self.l2(output)
+        return  F.log_softmax(output, dim=-1), output_tf
+    
+class TransformerModel_d(nn.Module):
+
+    def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
+                nlayers: int, features: int, ostates: int, dropout: float = 0.5):
+        super().__init__()
+        self.model_type = 'Transformer'
+        self.d_model = d_model
+        self.encoder = nn.Embedding(ntoken, d_model)
+        encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout, batch_first=True)
+        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
+        self.fl = nn.Flatten()
+        self.l2 = nn.Linear(features*d_model,ostates)
+        self.init_weights()
+
+    def init_weights(self) -> None:
+        initrange = 0.1
+        self.encoder.weight.data.uniform_(-initrange, initrange)
+        self.l2.bias.data.zero_()
+        self.l2.weight.data.uniform_(-initrange, initrange)
+
+    def forward(self, src: Tensor, src_mask: Tensor) -> Tensor:
+        """
+        Args:
+            src: Tensor, shape [seq_len, batch_size]
+            src_mask: Tensor, shape [seq_len, seq_len]
+
+        Returns:
+            output Tensor of shape [seq_len, batch_size, ntoken]
+        """
+        src = self.encoder(src) * math.sqrt(self.d_model)
+        #src = self.pos_encoder(src)
         output_tf = self.transformer_encoder(src, src_mask)
         output = self.fl(output_tf)
         output = self.l2(output)

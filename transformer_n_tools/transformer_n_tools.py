@@ -17,8 +17,6 @@ import torch.nn.functional as F
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from torch.nn import functional as F
 
-'Hi'
-
 class PyMEGABASE:
     R"""
     The :class:`~.PyMEGABASE` class performs genomic annotations .

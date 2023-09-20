@@ -910,13 +910,13 @@ class PyMEGABASE:
         chr_averages=self.build_state_vector(int_types,all_averages)
         return chr_averages[1:]
 
-    def training_data(self,n_neigbors=2,train_per=0.8):
+    def training_data(self,n_neigbors=2,train_per=0.8,n_predict=1):
         tmp_all_matrix=self.get_tmatrix(range(1,23))
         nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
         #Populate data with neighbor information
         tmp=[]
         for l in range(n_neigbors,len(tmp_all_matrix[0])-n_neigbors):
-            tmp.append(np.insert(np.concatenate(tmp_all_matrix[nfeatures*2+1:nfeatures*3+1,l-n_neigbors:l+n_neigbors+1].T),0,tmp_all_matrix[0,l]))
+            tmp.append(np.insert(np.concatenate(tmp_all_matrix[nfeatures*2+1:nfeatures*3+1,l-n_neigbors:l+n_neigbors+1].T),0,tmp_all_matrix[0,l-n_predict+1:l+n_predict]))
         all_matrix=np.array(tmp).T
         #Segment data between train, test and valiation sets
         tidx=np.random.choice(np.linspace(0,len(all_matrix[0])-1,len(all_matrix[0])).astype(int),size=int(train_per*len(all_matrix[0])),replace=False)
@@ -933,7 +933,7 @@ class PyMEGABASE:
 
         return train_set, validation_set, test_set
 
-    def get_test_set(self,cellname,n_neigbors,chrms=range(1,23)):
+    def get_test_set(self,cellname,n_neigbors=2,n_predict=1,chrms=range(1,23)):
         #Initialize PyMEGABASE
         self.cell_line_path=cellname+'_GRCh38_zscore'
         print('looking for data in:',self.cell_line_path)
@@ -945,7 +945,7 @@ class PyMEGABASE:
         tmp=[]
         nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
         for l in range(n_neigbors,len(test_cell[0])-n_neigbors):
-            tmp.append(np.insert(np.concatenate(test_cell[nfeatures*2:nfeatures*3,l-n_neigbors:l+n_neigbors+1].T),0,1))
+            tmp.append(np.insert(np.concatenate(test_cell[nfeatures*2:nfeatures*3,l-n_neigbors:l+n_neigbors+1].T),0,np.zeros(n_predict)))
         testmatrix=np.array(tmp).T
         nfeatures=(2*n_neigbors+1)*nfeatures
         test_set=testmatrix.T

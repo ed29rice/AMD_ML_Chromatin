@@ -1045,7 +1045,7 @@ class TransformerModel_c_mulitple_loci(nn.Module):
         encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout, batch_first=True)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.fl = nn.Flatten()
-        self.l2 = nn.Linear(features*d_model,ostates*n_pred_loci)
+        self.l2 = nn.Linear(features*d_model,ostates*(2*(n_pred_loci-1)+1))
         self.init_weights()
 
     def init_weights(self) -> None:

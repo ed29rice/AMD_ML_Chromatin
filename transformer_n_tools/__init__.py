@@ -1,4 +1,4 @@
 __version__ = '1.0.0'
 
-from .PyMEGABASE import PyMEGABASE
+from .transformer_n_tools import *
 from .drop_down import cell_lines

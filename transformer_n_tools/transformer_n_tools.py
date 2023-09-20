@@ -13,6 +13,8 @@ import torch.nn.functional as F
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from torch.nn import functional as F
 
+
+
 class PyMEGABASE:
     def __init__(self, cell_line='GM12878', assembly='hg19',organism='human',signal_type='signal p-value',file_format='bigWig',
                 ref_cell_line_path='tmp_meta',cell_line_path=None,types_path=None,
@@ -931,6 +933,24 @@ class PyMEGABASE:
 
         return train_set, validation_set, test_set
 
+    def get_test_set(self,cellname,n_neigbors,chrms=range(1,23)):
+        #Initialize PyMEGABASE
+        self.cell_line_path=cellname+'_GRCh38_zscore'
+        print('looking for data in:',self.cell_line_path)
+        test_cell=[]
+        for chr in chrms:
+            test_cell.append(self.test_set(chr=chr,silent=True))
+        test_cell=np.concatenate(test_cell,axis=1)
+        #Populate prediction set
+        tmp=[]
+        nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
+        for l in range(n_neigbors,len(test_cell[0])-n_neigbors):
+            tmp.append(np.insert(np.concatenate(test_cell[nfeatures*2:nfeatures*3,l-n_neigbors:l+n_neigbors+1].T),0,1))
+        testmatrix=np.array(tmp).T
+        nfeatures=(2*n_neigbors+1)*nfeatures
+        test_set=testmatrix.T
+        test_data=torch.tensor(test_set.astype(float))
+        return test_data
 
     def printHeader(self):
         print('{:^96s}'.format("****************************************************************************************"))
@@ -973,6 +993,14 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class TransformerModel_c(nn.Module):
+    """
+    Best set of hyperparameters:
+    emsize = 128 # embedding dimension
+    d_hid = 64 # dimension of the feedforward network model in nn.TransformerEncoder
+    nlayers = 2 # number of nn.TransformerEncoderLayer in nn.TransformerEncoder
+    nhead = 8  # number of heads in nn.MultiheadAttention
+    dropout = 0.01  # dropout probability
+    """
     def __init__(self, d_model: int, nhead: int, d_hid: int,
                 nlayers: int, features: int, ostates: int, dropout: float = 0.5):
         super().__init__()
@@ -1005,7 +1033,41 @@ class TransformerModel_c(nn.Module):
         output = self.fl(output_tf)
         output = self.l2(output)
         return  F.log_softmax(output, dim=-1), output_tf
-    
+
+class TransformerModel_c_mulitple_loci(nn.Module):
+    def __init__(self, n_pred_loci: int, d_model: int, nhead: int, d_hid: int,
+                nlayers: int, features: int, ostates: int, dropout: float = 0.5):
+        super().__init__()
+        self.model_type = 'Transformer'
+        self.d_model = d_model
+        self.encoder = nn.Linear(1, d_model)
+        self.pos_encoder = PositionalEncoding(d_model, dropout)
+        encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout, batch_first=True)
+        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
+        self.fl = nn.Flatten()
+        self.l2 = nn.Linear(features*d_model,ostates*n_pred_loci)
+        self.init_weights()
+
+    def init_weights(self) -> None:
+        initrange = 0.1
+        self.encoder.bias.data.zero_()
+        self.encoder.weight.data.uniform_(-initrange, initrange)
+        self.l2.bias.data.zero_()
+        self.l2.weight.data.uniform_(-initrange, initrange)
+
+    def partial_forward(self, src: Tensor, src_mask: Tensor) -> Tensor:
+        src = self.encoder(src) * math.sqrt(self.d_model)
+        src = self.pos_encoder(src)
+        return(src)
+
+    def forward(self, src: Tensor, src_mask: Tensor) -> Tensor:
+        src = self.encoder(src) * math.sqrt(self.d_model)
+        src = self.pos_encoder(src)
+        output_tf = self.transformer_encoder(src, src_mask)
+        output = self.fl(output_tf)
+        output = self.l2(output)
+        return  F.log_softmax(output, dim=-1), output_tf
+
 class TransformerModel_d(nn.Module):
 
     def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
@@ -1041,3 +1103,4 @@ class TransformerModel_d(nn.Module):
         output = self.fl(output_tf)
         output = self.l2(output)
         return  F.log_softmax(output, dim=-1), output_tf
+

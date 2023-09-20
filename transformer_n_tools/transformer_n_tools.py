@@ -1046,6 +1046,7 @@ class TransformerModel_c_mulitple_loci(nn.Module):
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.fl = nn.Flatten()
         self.l2 = nn.Linear(features*d_model,ostates*(2*(n_pred_loci-1)+1))
+        self.unfl = nn.Unflatten(-1,((2*(n_pred_loci-1)+1),ostates))
         self.init_weights()
 
     def init_weights(self) -> None:
@@ -1066,6 +1067,7 @@ class TransformerModel_c_mulitple_loci(nn.Module):
         output_tf = self.transformer_encoder(src, src_mask)
         output = self.fl(output_tf)
         output = self.l2(output)
+        output = self.unfl(output)
         return  F.log_softmax(output, dim=-1), output_tf
 
 class TransformerModel_d(nn.Module):

@@ -915,7 +915,7 @@ class PyMEGABASE:
         nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
         #Populate data with neighbor information
         tmp=[]
-        for l in range(n_neigbors,len(tmp_all_matrix[0])-n_neigbors):
+        for l in range(np.max([n_neigbors,n_predict]),len(tmp_all_matrix[0])-np.max([n_neigbors,n_predict])):
             tmp.append(np.insert(np.concatenate(tmp_all_matrix[nfeatures*2+1:nfeatures*3+1,l-n_neigbors:l+n_neigbors+1].T),0,tmp_all_matrix[0,l-n_predict+1:l+n_predict]))
         all_matrix=np.array(tmp).T
         #Segment data between train, test and valiation sets
@@ -1106,3 +1106,23 @@ class TransformerModel_d(nn.Module):
         output = self.l2(output)
         return  F.log_softmax(output, dim=-1), output_tf
 
+def extract_selfattention_maps(model,data):
+    with torch.no_grad():
+        src=model.partial_forward(data,None)
+        pred=model(data,None)[0].argmax(dim=1).cpu()
+
+    attention_maps = []
+    num_layers = model.transformer_encoder.num_layers
+    num_heads = model.transformer_encoder.layers[0].self_attn.num_heads
+    norm_first = model.transformer_encoder.layers[0].norm_first
+    with torch.no_grad():
+        for i in range(num_layers):
+            # compute attention of layer i
+            h = src.clone()
+            if norm_first:
+                h = model.transformer_encoder.layers[i].norm1(h)
+            attn = model.transformer_encoder.layers[i].self_attn(h, h, h,attn_mask=None,key_padding_mask=None,need_weights=True)[1]
+            attention_maps.append(attn)
+            # forward of layer i
+            src = model.transformer_encoder.layers[i](src,src_mask=None,src_key_padding_mask=None)
+    return attention_maps, pred

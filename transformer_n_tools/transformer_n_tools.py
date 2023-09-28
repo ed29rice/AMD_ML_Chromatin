@@ -931,7 +931,7 @@ class PyMEGABASE:
         validation_set=vmatrix.T
         test_set=testmatrix.T
 
-        return train_set, validation_set, test_set
+        return train_set, validation_set, test_set, all_matrix, ttidx
 
     def get_test_set(self,cellname,n_neigbors=2,n_predict=1,chrms=range(1,23)):
         #Initialize PyMEGABASE

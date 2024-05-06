@@ -2,7 +2,6 @@
 # This file is from the Open-MiChroM project, released under the MIT License. 
 
 import os, glob, requests, shutil, urllib, gzip, math, pyBigWig
-from scipy import stats
 import numpy as np
 from tqdm import tqdm
 from joblib import Parallel, delayed
@@ -14,12 +13,11 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from torch.nn import functional as F
 
 
-
-class PyMEGABASE:
+class data_process:
     def __init__(self, cell_line='GM12878', assembly='hg19',organism='human',signal_type='signal p-value',file_format='bigWig',
                 ref_cell_line_path='tmp_meta',cell_line_path=None,types_path=None,
                 histones=True,tf=False,atac=False,small_rna=False,total_rna=False,n_states=19,
-                extra_filter='',res=50,chromosome_sizes=None,AB=False):
+                extra_filter='',res=50,chromosome_sizes=None,require_ENCODE=False):
         pt = os.path.dirname(os.path.realpath(__file__))
         self.path_to_share = os.path.join(pt,'share/')
         self.cell_line=cell_line
@@ -35,7 +33,7 @@ class PyMEGABASE:
         if types_path!=None:
             self.types_path=types_path
         else:
-            self.types_path=self.path_to_share+'types'
+            self.types_path=self.path_to_share+'/subcom_GM12878_50kb'
         self.hist=histones
         self.tf=tf
         self.atac=atac
@@ -72,46 +70,47 @@ class PyMEGABASE:
         self.chrm_size=np.round(self.chrm_size+0.1).astype(int)
         self.ref_chrm_size = np.array([4990,4865,3964,3828,3620,3424,3184,2931,2826,2712,2703,2679,2307,2148,2052,1810,1626,1564,1184,1262,964,1028,1028])*50/self.res
         self.ref_chrm_size=np.round(self.ref_chrm_size+0.1).astype(int)
-        #Retrieves the available experiments on GM12878-hg19 to assess the download of experiments on the target cell
-        #Prepare url to request information
-        url='https://www.encodeproject.org/metadata/?type=Experiment&'
-        if self.hist==True:
-            url=url+'assay_title=Histone+ChIP-seq'
-        if self.tf==True:
-            url=url+'&assay_title=TF+ChIP-seq'
-        if self.atac==True:
-            url=url+'&assay_title=ATAC-seq'
-        if self.small_rna==True:
-            url=url+'&assay_title=small+RNA-seq'
-        if self.total_rna==True:
-            url=url+'&assay_title=total+RNA-seq'
-        self.url_ref=url+'&biosample_ontology.term_name='+self.ref_cell_line+'&files.file_type='+self.file_format
-        #Request information
-        r = requests.get(self.url_ref)
-        #Decode information requested
-        content=str(r.content)
-        experiments=[]
-        for k in content.split('\\n')[:-1]:
-            l=k.split('\\t')
-            if l[5]==self.ref_assembly and l[4]==self.signal_type and l[7]=='Histone ChIP-seq':
-                experiments.append(l[22])
-            elif l[5]==self.ref_assembly and l[4]==self.signal_type and l[7]=='ATAC-seq':
-                experiments.append(l[7])
-            elif l[5]==self.ref_assembly and l[4]==self.signal_type and l[7]=='TF ChIP-seq':
-                experiments.append(l[22])
-            elif l[5]==self.ref_assembly and l[4]=='plus strand signal of all reads' and l[7]=='small RNA-seq':
-                experiments.append('plus-small-RNA-seq')
-            elif l[5]==self.ref_assembly and l[4]=='plus strand signal of all reads' and l[7]=='total RNA-seq':
-                experiments.append('plus-total-RNA-seq')          
-            elif l[5]==self.ref_assembly and l[4]=='minus strand signal of all reads' and l[7]=='small RNA-seq':
-                experiments.append('minus-small-RNA-seq')
-            elif l[5]==self.ref_assembly and l[4]=='minus strand signal of all reads' and l[7]=='total RNA-seq':
-                experiments.append('minus-total-RNA-seq')          
-        #Extract set of experiments found on GM12878-hg19 
-        self.experiments_unique=np.unique(experiments)
-        self.es_unique=[]   
-        for e in self.experiments_unique:
-            self.es_unique.append(e.split('-human')[0])
+        if require_ENCODE==True:
+            #Retrieves the available experiments on GM12878-hg19 to assess the download of experiments on the target cell
+            #Prepare url to request information
+            url='https://www.encodeproject.org/metadata/?type=Experiment&'
+            if self.hist==True:
+                url=url+'assay_title=Histone+ChIP-seq'
+            if self.tf==True:
+                url=url+'&assay_title=TF+ChIP-seq'
+            if self.atac==True:
+                url=url+'&assay_title=ATAC-seq'
+            if self.small_rna==True:
+                url=url+'&assay_title=small+RNA-seq'
+            if self.total_rna==True:
+                url=url+'&assay_title=total+RNA-seq'
+            self.url_ref=url+'&biosample_ontology.term_name='+self.ref_cell_line+'&files.file_type='+self.file_format
+            #Request information
+            r = requests.get(self.url_ref)
+            #Decode information requested
+            content=str(r.content)
+            experiments=[]
+            for k in content.split('\\n')[:-1]:
+                l=k.split('\\t')
+                if l[5]==self.ref_assembly and l[4]==self.signal_type and l[7]=='Histone ChIP-seq':
+                    experiments.append(l[22])
+                elif l[5]==self.ref_assembly and l[4]==self.signal_type and l[7]=='ATAC-seq':
+                    experiments.append(l[7])
+                elif l[5]==self.ref_assembly and l[4]==self.signal_type and l[7]=='TF ChIP-seq':
+                    experiments.append(l[22])
+                elif l[5]==self.ref_assembly and l[4]=='plus strand signal of all reads' and l[7]=='small RNA-seq':
+                    experiments.append('plus-small-RNA-seq')
+                elif l[5]==self.ref_assembly and l[4]=='plus strand signal of all reads' and l[7]=='total RNA-seq':
+                    experiments.append('plus-total-RNA-seq')          
+                elif l[5]==self.ref_assembly and l[4]=='minus strand signal of all reads' and l[7]=='small RNA-seq':
+                    experiments.append('minus-small-RNA-seq')
+                elif l[5]==self.ref_assembly and l[4]=='minus strand signal of all reads' and l[7]=='total RNA-seq':
+                    experiments.append('minus-total-RNA-seq')          
+            #Extract set of experiments found on GM12878-hg19 
+            self.experiments_unique=np.unique(experiments)
+            self.es_unique=[]   
+            for e in self.experiments_unique:
+                self.es_unique.append(e.split('-human')[0])
 
     def process_replica_bw(self,line,cell_line_path,chrm_size):
         R"""

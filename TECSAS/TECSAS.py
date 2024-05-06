@@ -755,7 +755,7 @@ class data_process:
         all_averages=all_averages
         return all_averages
 
-    def get_tmatrix(self,chrms,silent=False,unique_file==None):
+    def get_tmatrix(self,chrms,silent=False,unique_file=None):
         R"""
         Extract the training data
 

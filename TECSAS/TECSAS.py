@@ -991,49 +991,7 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:,:x.size(1)]
         return self.dropout(x)
 
-class TransformerModel_c(nn.Module):
-    """
-    Best set of hyperparameters:
-    emsize = 128 # embedding dimension
-    d_hid = 64 # dimension of the feedforward network model in nn.TransformerEncoder
-    nlayers = 2 # number of nn.TransformerEncoderLayer in nn.TransformerEncoder
-    nhead = 8  # number of heads in nn.MultiheadAttention
-    dropout = 0.01  # dropout probability
-    """
-    def __init__(self, d_model: int, nhead: int, d_hid: int,
-                nlayers: int, features: int, ostates: int, dropout: float = 0.5):
-        super().__init__()
-        self.model_type = 'Transformer'
-        self.d_model = d_model
-        self.encoder = nn.Linear(1, d_model)
-        self.pos_encoder = PositionalEncoding(d_model, dropout)
-        encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout, batch_first=True)
-        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.fl = nn.Flatten()
-        self.l2 = nn.Linear(features*d_model,ostates)
-        self.init_weights()
-
-    def init_weights(self) -> None:
-        initrange = 0.1
-        self.encoder.bias.data.zero_()
-        self.encoder.weight.data.uniform_(-initrange, initrange)
-        self.l2.bias.data.zero_()
-        self.l2.weight.data.uniform_(-initrange, initrange)
-
-    def partial_forward(self, src: Tensor, src_mask: Tensor) -> Tensor:
-        src = self.encoder(src) * math.sqrt(self.d_model)
-        src = self.pos_encoder(src)
-        return(src)
-
-    def forward(self, src: Tensor, src_mask: Tensor) -> Tensor:
-        src = self.encoder(src) * math.sqrt(self.d_model)
-        src = self.pos_encoder(src)
-        output_tf = self.transformer_encoder(src, src_mask)
-        output = self.fl(output_tf)
-        output = self.l2(output)
-        return  F.log_softmax(output, dim=-1), output_tf
-
-class TransformerModel_c_mulitple_loci(nn.Module):
+class TECSAS(nn.Module):
     def __init__(self, n_pred_loci: int, d_model: int, nhead: int, d_hid: int,
                 nlayers: int, features: int, ostates: int, dropout: float = 0.5):
         super().__init__()
@@ -1069,7 +1027,7 @@ class TransformerModel_c_mulitple_loci(nn.Module):
         output = self.unfl(output)
         return  F.log_softmax(output, dim=-1), output_tf
 
-class TransformerModel_d(nn.Module):
+class TECSAS_discrete(nn.Module):
 
     def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
                 nlayers: int, features: int, ostates: int, dropout: float = 0.5):

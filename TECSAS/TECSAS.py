@@ -755,7 +755,7 @@ class data_process:
         all_averages=all_averages
         return all_averages
 
-    def get_tmatrix(self,chrms,silent=False):
+    def get_tmatrix(self,chrms,silent=False,unique_file==None):
         R"""
         Extract the training data
 
@@ -782,7 +782,10 @@ class data_process:
         types=np.concatenate(types)
         int_types=np.array(list(map(self.TYPE_TO_INT.get, types)))
         #Check which experiments are available to train 
-        unique=np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str)
+        if unique_file==None:
+            unique=np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str)
+        else:
+            unique=np.loadtxt(unique_file,dtype=str)
         if unique.shape==(): unique=[unique]
         if silent==False:print('To train the following experiments are used:')
         #Load each track and average over replicas

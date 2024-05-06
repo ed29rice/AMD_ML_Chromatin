@@ -921,7 +921,7 @@ class data_process:
         tidx=np.random.choice(np.linspace(0,len(all_matrix[0])-1,len(all_matrix[0])).astype(int),size=int(train_per*len(all_matrix[0])),replace=False)
         ttidx=np.zeros(len(all_matrix[0])).astype(bool)
         ttidx[tidx]=1
-
+        #Split genome data between train, validation and test set
         tmatrix=all_matrix[:,ttidx]
         vmatrix=all_matrix[:,~ttidx][:,::2]
         testmatrix=all_matrix[:,~ttidx][:,1::2]

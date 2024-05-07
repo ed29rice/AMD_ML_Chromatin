@@ -843,92 +843,6 @@ class data_process:
         else:
             print('There are no experiment suitable for the prediction')
 
-    def training_set_up(self,chrms=None,filter=True):
-        R"""
-        Formats data to allow the training
-
-        Args: 
-            chrms (list, optional):
-                Set of chromosomes from the reference data to use as the training set
-            filter (bool, optional):
-                Filter experiments based on the baseline
-        """
-        if chrms==None:
-            # We are training in odd chromosomes data
-            if self.cell_line=='GM12878' and self.assembly=='hg19':
-                chrms=[1,3,5,7,9,11,13,15,17,19,21]
-            else:
-                chrms=[i for i in range(1,23)]
-        if filter==True: 
-            all_averages=self.get_tmatrix(chrms,silent=True)
-            self.tmatrix=np.copy(all_averages)
-            self.filter_exp()
-        all_averages=self.get_tmatrix(chrms,silent=False)
-        self.tmatrix=np.copy(all_averages)
-        # Translate Potts states to sequences
-        sequences=np.array(list(map(self.INT_TO_RES.get, all_averages.flatten()))).reshape(all_averages.shape)
-        #Generate sequence file 
-        with open(self.cell_line_path+"/sequences.fa",'w',encoding = 'utf-8') as f:
-            for i in range(len(sequences.T)):
-                f.write('>'+str(i).zfill(4)+'\n')
-                f.write(''.join(sequences[:,i])+'\n')
-
-    def test_set(self,chr=1,silent=False):
-        R"""
-        Predicts and outputs the genomic annotations for chromosome X
-        
-        Args: 
-            chr (int, required):
-                Chromosome to extract input data fro the D-nodes
-            silent (bool, optional):
-                Avoid printing information 
-        Returns:
-            array (size of chromosome,5*number of unique experiments)
-                D-node input data
-        """
-        if silent==False:print('Test set for chromosome: ',chr)        
-        if chr!='X':
-            types=["A1" for i in range(self.chrm_size[chr-1])]
-        else:
-            types=["A1" for i in range(self.chrm_size[-1])]
-        int_types=np.array(list(map(self.TYPE_TO_INT.get, types)))
-        unique=np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str) 
-        if unique.shape==(): unique=[unique]
-        #Load each track and average over 
-        all_averages=[]
-        for u in unique:
-            reps=[]
-            for i in glob.glob(self.cell_line_path+'/'+str(u)+'*'):
-                tmp=[]
-                try:
-                    tmp=np.loadtxt(i+'/chr'+str(chr)+'.track',skiprows=3)[:,2]
-                    reps.append(tmp)
-                except:
-                    if silent==False:print(i,' failed with at least one chromosome')
-            reps=np.array(reps)
-            ave_reps=np.mean(reps,axis=0)
-            all_averages.append(ave_reps)
-        all_averages=np.array(all_averages)
-        chr_averages=self.build_state_vector(int_types,all_averages)
-        return chr_averages[1:]
-
-    def test_data(self,n_neigbors=2,n_predict=1,unique_file=None):
-        tmp_all_matrix=self.get_tmatrix(range(1,23),silent=False,unique_file=unique_file)
-        if unique_file==None:
-            nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
-        else:
-            nfeatures=len(np.loadtxt(unique_file,dtype=str))
-        #Populate data with neighbor information
-        tmp=[]
-        for l in range(np.max([n_neigbors,n_predict]),len(tmp_all_matrix[0])-np.max([n_neigbors,n_predict])):
-            tmp.append(np.insert(np.concatenate(tmp_all_matrix[nfeatures*2+1:nfeatures*3+1,l-n_neigbors:l+n_neigbors+1].T),0,tmp_all_matrix[0,l-n_predict+1:l+n_predict]))
-        all_matrix=np.array(tmp).T
-
-        testmatrix=all_matrix
-        test_set=testmatrix.T
-
-        return test_set, all_matrix
-
     def training_data(self,n_neigbors=2,train_per=0.8,n_predict=1):
         tmp_all_matrix=self.get_tmatrix(range(1,23))
         nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
@@ -970,25 +884,6 @@ class data_process:
         test_set=testmatrix.T
         test_data=torch.tensor(test_set.astype(float))
         return test_data
-
-    def printHeader(self):
-        print('{:^96s}'.format("****************************************************************************************"))
-        print('{:^96s}'.format("**** *** *** *** *** *** *** *** PyMEGABASE-1.0.0 *** *** *** *** *** *** *** ****"))
-        print('{:^96s}'.format("**** *** *** *** *** *** *** *** PyMEGABASE-1.0.0 *** *** *** *** *** *** *** ****"))
-        print('{:^96s}'.format("**** *** *** *** *** *** *** *** PyMEGABASE-1.0.0 *** *** *** *** *** *** *** ****"))
-        print('{:^96s}'.format("****************************************************************************************"))
-        print('')
-        print('{:^96s}'.format("The PyMEGABASE class performs the prediction of genomic annotations"))
-        print('{:^96s}'.format("based on 1D data tracks of Chip-Seq and RNA-Seq. The input data is "))
-        print('{:^96s}'.format("obtained from ENCODE data base."))
-        print('{:^96s}'.format("PyMEGABASE description is described in: TBD"))
-        print('')
-        print('{:^96s}'.format("This package is the product of contributions from a number of people, including:"))
-        print('{:^96s}'.format("Esteban Dodero-Rojas, Antonio Oliveira, Vinícius Contessoto,"))
-        print('{:^96s}'.format("Ryan Cheng, and, Jose Onuchic"))
-        print('{:^96s}'.format("Rice University"))
-        print('')
-        print('{:^96s}'.format("****************************************************************************************"))
 
 class PositionalEncoding(nn.Module):
 

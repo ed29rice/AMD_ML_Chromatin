@@ -1,5 +1,5 @@
 # Copyright (c) 2020-2023 The Center for Theoretical Biological Physics (CTBP) - Rice University
-# This file is from the Open-MiChroM project, released under the MIT License. 
+# This file is from the TECSAS project, released under the MIT License. 
 
 import os, glob, requests, shutil, urllib, gzip, math, pyBigWig
 import numpy as np

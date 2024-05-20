@@ -843,6 +843,45 @@ class data_process:
         else:
             print('There are no experiment suitable for the prediction')
 
+    def test_set(self,chr=1,silent=False):
+        R"""
+        Predicts and outputs the genomic annotations for chromosome X
+        
+        Args: 
+            chr (int, required):
+                Chromosome to extract input data fro the D-nodes
+            silent (bool, optional):
+                Avoid printing information 
+        Returns:
+            array (size of chromosome,5*number of unique experiments)
+                D-node input data
+        """
+        if silent==False:print('Test set for chromosome: ',chr)        
+        if chr!='X':
+            types=["A1" for i in range(self.chrm_size[chr-1])]
+        else:
+            types=["A1" for i in range(self.chrm_size[-1])]
+        int_types=np.array(list(map(self.TYPE_TO_INT.get, types)))
+        unique=np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str) 
+        if unique.shape==(): unique=[unique]
+        #Load each track and average over 
+        all_averages=[]
+        for u in unique:
+            reps=[]
+            for i in glob.glob(self.cell_line_path+'/'+str(u)+'*'):
+                tmp=[]
+                try:
+                    tmp=np.loadtxt(i+'/chr'+str(chr)+'.track',skiprows=3)[:,2]
+                    reps.append(tmp)
+                except:
+                    if silent==False:print(i,' failed with at least one chromosome')
+            reps=np.array(reps)
+            ave_reps=np.mean(reps,axis=0)
+            all_averages.append(ave_reps)
+        all_averages=np.array(all_averages)
+        chr_averages=self.build_state_vector(int_types,all_averages)
+        return chr_averages[1:]
+
     def training_data(self,n_neigbors=2,train_per=0.8,n_predict=1):
         tmp_all_matrix=self.get_tmatrix(range(1,23))
         nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))

@@ -882,6 +882,23 @@ class data_process:
         chr_averages=self.build_state_vector(int_types,all_averages)
         return chr_averages[1:]
 
+    def test_data(self,n_neigbors=2,n_predict=1,unique_file=None):
+        tmp_all_matrix=self.get_tmatrix(range(1,23),silent=False,unique_file=unique_file)
+        if unique_file==None:
+            nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
+        else:
+            nfeatures=len(np.loadtxt(unique_file,dtype=str))
+        #Populate data with neighbor information
+        tmp=[]
+        for l in range(np.max([n_neigbors,n_predict]),len(tmp_all_matrix[0])-np.max([n_neigbors,n_predict])):
+            tmp.append(np.insert(np.concatenate(tmp_all_matrix[nfeatures*2+1:nfeatures*3+1,l-n_neigbors:l+n_neigbors+1].T),0,tmp_all_matrix[0,l-n_predict+1:l+n_predict]))
+        all_matrix=np.array(tmp).T
+
+        testmatrix=all_matrix
+        test_set=testmatrix.T
+
+        return test_set, all_matrix
+
     def training_data(self,n_neigbors=2,train_per=0.8,n_predict=1):
         tmp_all_matrix=self.get_tmatrix(range(1,23))
         nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))

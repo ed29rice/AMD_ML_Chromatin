@@ -922,6 +922,44 @@ class data_process:
 
         return train_set, validation_set, test_set, all_matrix, ttidx
 
+    def training_data_chrom(self,n_neigbors=2,train_per=0.8,n_predict=1):
+        tmp_all_matrix=self.get_tmatrix(range(1,23,2))
+        nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
+        #Populate data with neighbor information
+        tmp=[]
+        for l in range(np.max([n_neigbors,n_predict]),len(tmp_all_matrix[0])-np.max([n_neigbors,n_predict])):
+            tmp.append(np.insert(np.concatenate(tmp_all_matrix[nfeatures*2+1:nfeatures*3+1,l-n_neigbors:l+n_neigbors+1].T),0,tmp_all_matrix[0,l-n_predict+1:l+n_predict]))
+        all_matrix=np.array(tmp).T
+        #Segment data between train, test and valiation sets
+        tidx=np.random.choice(np.linspace(0,len(all_matrix[0])-1,len(all_matrix[0])).astype(int),size=int(train_per*len(all_matrix[0])),replace=False)
+        ttidx=np.zeros(len(all_matrix[0])).astype(bool)
+        ttidx[tidx]=1
+        #Store odd chromosomes as training set
+        tmatrix=all_matrix
+        all_matrix_train = all_matrix
+
+        tmp_all_matrix=self.get_tmatrix(range(2,23,2))
+        nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
+        #Populate data with neighbor information
+        tmp=[]
+        for l in range(np.max([n_neigbors,n_predict]),len(tmp_all_matrix[0])-np.max([n_neigbors,n_predict])):
+            tmp.append(np.insert(np.concatenate(tmp_all_matrix[nfeatures*2+1:nfeatures*3+1,l-n_neigbors:l+n_neigbors+1].T),0,tmp_all_matrix[0,l-n_predict+1:l+n_predict]))
+        all_matrix=np.array(tmp).T
+        #Segment data between train, test and valiation sets
+        tidx=np.random.choice(np.linspace(0,len(all_matrix[0])-1,len(all_matrix[0])).astype(int),size=int(train_per*len(all_matrix[0])),replace=False)
+        ttidx=np.zeros(len(all_matrix[0])).astype(bool)
+        ttidx[tidx]=1
+        #Store even chromosomes as training set
+        vmatrix=all_matrix[:,::2]
+        testmatrix=all_matrix[:,1::2]
+        all_matrix_val_test = all_matrix
+        train_set=tmatrix.T
+        validation_set=vmatrix.T
+        test_set=testmatrix.T
+
+        all_data=np.concatenate([all_matrix_train,all_matrix_val_test])
+        return train_set, validation_set, test_set, all_matrix, ttidx
+
     def get_test_set(self,cellname,n_neigbors=2,n_predict=1,chrms=range(1,23)):
         #Initialize PyMEGABASE
         self.cell_line_path=cellname+'_GRCh38_zscore'

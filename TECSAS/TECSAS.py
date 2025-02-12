@@ -923,8 +923,8 @@ class data_process:
 
         return train_set, validation_set, test_set, all_matrix, ttidx
 
-    def training_data_chrom(self,n_neigbors=2,train_per=0.8,n_predict=1):
-        tmp_all_matrix=self.get_tmatrix(range(1,23,2))
+    def training_data_chrom(self,n_neigbors=2,train_per=0.8,train_chroms=[1,2,3,4],n_predict=1):
+        tmp_all_matrix=self.get_tmatrix(train_chroms)
         nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
         #Populate data with neighbor information
         tmp=[]
@@ -936,8 +936,8 @@ class data_process:
         #Store odd chromosomes as training set
         tmatrix=all_matrix
         all_matrix_train = all_matrix
-
-        tmp_all_matrix=self.get_tmatrix(range(2,23,2))
+        test_val_chroms = [i for i in range(1,23,1) if not i in train_chroms]
+        tmp_all_matrix=self.get_tmatrix(test_val_chroms)
         nfeatures=len(np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str))
         #Populate data with neighbor information
         tmp=[]

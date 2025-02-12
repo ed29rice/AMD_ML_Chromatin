@@ -1,7 +1,7 @@
 # Copyright (c) 2020-2023 The Center for Theoretical Biological Physics (CTBP) - Rice University
 # This file is from the TECSAS project, released under the MIT License. 
 
-import os, glob, requests, shutil, urllib, gzip, math, pyBigWig
+import os, glob, requests, shutil, urllib, gzip, math
 import numpy as np
 from tqdm import tqdm
 from joblib import Parallel, delayed
@@ -18,6 +18,7 @@ class data_process:
                 ref_cell_line_path='tmp_meta',cell_line_path=None,types_path=None,
                 histones=True,tf=False,atac=False,small_rna=False,total_rna=False,n_states=19,
                 extra_filter='',res=50,chromosome_sizes=None,require_ENCODE=False):
+        import pyBigWig
         pt = os.path.dirname(os.path.realpath(__file__))
         self.path_to_share = os.path.join(pt,'share/')
         self.cell_line=cell_line
@@ -931,9 +932,7 @@ class data_process:
             tmp.append(np.insert(np.concatenate(tmp_all_matrix[nfeatures*2+1:nfeatures*3+1,l-n_neigbors:l+n_neigbors+1].T),0,tmp_all_matrix[0,l-n_predict+1:l+n_predict]))
         all_matrix=np.array(tmp).T
         #Segment data between train, test and valiation sets
-        tidx=np.random.choice(np.linspace(0,len(all_matrix[0])-1,len(all_matrix[0])).astype(int),size=int(train_per*len(all_matrix[0])),replace=False)
-        ttidx=np.zeros(len(all_matrix[0])).astype(bool)
-        ttidx[tidx]=1
+        ttidx=np.ones(len(all_matrix[0])).astype(bool)
         #Store odd chromosomes as training set
         tmatrix=all_matrix
         all_matrix_train = all_matrix
@@ -947,8 +946,6 @@ class data_process:
         all_matrix=np.array(tmp).T
         #Segment data between train, test and valiation sets
         tidx=np.random.choice(np.linspace(0,len(all_matrix[0])-1,len(all_matrix[0])).astype(int),size=int(train_per*len(all_matrix[0])),replace=False)
-        ttidx=np.zeros(len(all_matrix[0])).astype(bool)
-        ttidx[tidx]=1
         #Store even chromosomes as training set
         vmatrix=all_matrix[:,::2]
         testmatrix=all_matrix[:,1::2]
@@ -956,9 +953,11 @@ class data_process:
         train_set=tmatrix.T
         validation_set=vmatrix.T
         test_set=testmatrix.T
+        ttidx=np.concatenate([ttidx,np.zeros(len(all_matrix[0])).astype(bool)])
 
-        all_data=np.concatenate([all_matrix_train,all_matrix_val_test])
-        return train_set, validation_set, test_set, all_matrix, ttidx
+        all_data=np.concatenate([all_matrix_train.T,all_matrix_val_test.T]).T
+        return train_set, validation_set, test_set, all_data, ttidx
+
 
     def get_test_set(self,cellname,n_neigbors=2,n_predict=1,chrms=range(1,23)):
         #Initialize PyMEGABASE

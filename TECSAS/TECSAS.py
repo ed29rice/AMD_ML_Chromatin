@@ -1024,7 +1024,7 @@ class TECSAS(nn.Module):
         self.model_type = 'Transformer'
         self.d_model = d_model
         self.encoder = nn.Linear(1, d_model)
-        self.pos_encoder = PositionalEncoding(d_model, dropout)
+        self.pos_encoder = PositionalEncoding(d_model, dropout,max_len=features)
         encoder_layers = TransformerEncoderLayer(d_model, nhead, d_hid, dropout, batch_first=True)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.fl = nn.Flatten()

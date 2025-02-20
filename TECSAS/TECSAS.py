@@ -18,7 +18,8 @@ class data_process:
                 ref_cell_line_path='tmp_meta',ref_chrm_size=None,cell_line_path=None,types_path=None,
                 histones=True,tf=False,atac=False,small_rna=False,total_rna=False,n_states=19,
                 extra_filter='',res=50,chromosome_sizes=None,require_ENCODE=False):
-        import pyBigWig
+        import pyBigWig as pybw
+        self.pybw = pybw
         pt = os.path.dirname(os.path.realpath(__file__))
         self.path_to_share = os.path.join(pt,'share/')
         self.cell_line=cell_line
@@ -154,7 +155,7 @@ class data_process:
                 f.write(sr_number+' '+exp+'\n')
                 
             #Load data from server
-            bw = pyBigWig.open("https://www.encodeproject.org/files/"+text+"/@@download/"+text+".bigWig")
+            bw = self.pybw.open("https://www.encodeproject.org/files/"+text+"/@@download/"+text+".bigWig")
             #Process replica for numbered chromosomes
             for chr in range(1,len(chrm_size)):
                 signal = bw.stats("chr"+str(chr), type="mean", nBins=chrm_size[chr-1])
@@ -543,7 +544,7 @@ class data_process:
             f.write(experiment+' '+experiment+'\n')
         #Load data from track
         try:
-            bw = pyBigWig.open(bw_file)
+            bw = self.pybw.open(bw_file)
             for chr in range(1,len(self.chrm_size)):
                 signal = bw.stats("chr"+str(chr), type="mean", nBins=self.chrm_size[chr-1])
                 #Process signal and binning

@@ -15,7 +15,7 @@ from torch.nn import functional as F
 
 class data_process:
     def __init__(self, cell_line='GM12878', assembly='hg19',organism='human',signal_type='signal p-value',file_format='bigWig',
-                ref_cell_line_path='tmp_meta',ref_chrm_size=None,cell_line_path=None,types_path=None,
+                ref_cell_line_path='tmp_meta',ref_chrm_size=None,num_sub=None,cell_line_path=None,types_path=None,
                 histones=True,tf=False,atac=False,small_rna=False,total_rna=False,n_states=19,
                 extra_filter='',res=50,chromosome_sizes=None,require_ENCODE=False):
         import pyBigWig as pybw
@@ -55,7 +55,7 @@ class data_process:
                 'S': 16, 'T': 17, 'V': 18, 'W':19, 'Y':20,
                 '-':21, '.':21, '~':21,}
         self.INT_TO_RES = {self.RES_TO_INT[k]:k for k in self.RES_TO_INT.keys()}
-        self.TYPE_TO_INT = {'A1':0,'A2':1,'B1':2,'B2':3,'B3':4,'B4':5,'NA':6}
+        self.TYPE_TO_INT = {'A1':0,'A2':1,'B1':2,'B2':3,'B3':4,'B4':5,'NA':-1}
         self.INT_TO_TYPE = {self.TYPE_TO_INT[k]:k for k in self.TYPE_TO_INT.keys()}
         # Define assembly of the target cell
         if assembly=='GRCh38':
@@ -75,6 +75,9 @@ class data_process:
             self.ref_chrm_size = np.round(self.ref_chrm_size+0.1).astype(int)
             self.custom_chrom_size = False
         else:
+            self.num_sub = num_sub
+            self.TYPE_TO_INT = {'A1':0,'A2':1,'A3':2,'A4':3,'A5':4,'A6':5,'A7':6,'A8':7,'A9':8,'NA':-1}
+            self.INT_TO_TYPE = {self.TYPE_TO_INT[k]:k for k in self.TYPE_TO_INT.keys()}
             print('Custom N of loci per chromosome: \n',ref_chrm_size)
             self.ref_chrm_size = ref_chrm_size
             self.custom_chrom_size = True
@@ -757,8 +760,11 @@ class data_process:
         shift_2[:,0]=np.zeros(len(shift1[:,-1]))
         #Stack shifted tracks and subtypes labels
         all_averages=np.vstack((int_types,shift_2,shift_1,all_averages,shift1,shift2))
-        #To train, we exclude the centromers and B4 subcompartments
-        ndx=(all_averages[0,:]!=6) * (all_averages[0,:]!=5)
+        #To train, we exclude the NA and B4 subcompartments
+        if self.ref_chrm_size == None:
+            ndx=(all_averages[0,:]!=-1) * (all_averages[0,:]!=5)
+        else:
+            ndx=(all_averages[0,:]!=-1)
         all_averages=all_averages[:,ndx]
         all_averages=all_averages
         return all_averages
@@ -786,7 +792,10 @@ class data_process:
                         tmp.append('NA')
                 types.append(tmp)
         types=np.concatenate(types)
-        int_types=np.array(list(map(self.TYPE_TO_INT.get, types)))
+        if self.res==50 and self.custom_chrom_size==False:
+            int_types=np.array(list(map(self.TYPE_TO_INT.get, types)))
+        else:
+            int_types=types
         #Check which experiments are available to train 
         if unique_file==None:
             unique=np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str)

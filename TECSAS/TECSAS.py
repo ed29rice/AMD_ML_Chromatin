@@ -15,7 +15,7 @@ from torch.nn import functional as F
 
 class data_process:
     def __init__(self, cell_line='GM12878', assembly='hg19',organism='human',signal_type='signal p-value',file_format='bigWig',
-                ref_cell_line_path='tmp_meta',cell_line_path=None,types_path=None,
+                ref_cell_line_path='tmp_meta',ref_chrm_size=None,cell_line_path=None,types_path=None,
                 histones=True,tf=False,atac=False,small_rna=False,total_rna=False,n_states=19,
                 extra_filter='',res=50,chromosome_sizes=None,require_ENCODE=False):
         import pyBigWig
@@ -69,8 +69,11 @@ class data_process:
             self.chrm_size = np.array(chromosome_sizes)/(self.res*1000)
             self.chrom_l = np.array(chromosome_sizes)
         self.chrm_size=np.round(self.chrm_size+0.1).astype(int)
-        self.ref_chrm_size = np.array([4990,4865,3964,3828,3620,3424,3184,2931,2826,2712,2703,2679,2307,2148,2052,1810,1626,1564,1184,1262,964,1028,1028])*50/self.res
-        self.ref_chrm_size=np.round(self.ref_chrm_size+0.1).astype(int)
+        if ref_chrm_size == None:
+            self.ref_chrm_size = np.array([4990,4865,3964,3828,3620,3424,3184,2931,2826,2712,2703,2679,2307,2148,2052,1810,1626,1564,1184,1262,964,1028,1028])*50/self.res
+            self.ref_chrm_size = np.round(self.ref_chrm_size+0.1).astype(int)
+        else:
+            self.ref_chrm_size = ref_chrm_size
         if require_ENCODE==True:
             #Retrieves the available experiments on GM12878-hg19 to assess the download of experiments on the target cell
             #Prepare url to request information

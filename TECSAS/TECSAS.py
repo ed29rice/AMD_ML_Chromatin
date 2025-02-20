@@ -785,7 +785,7 @@ class data_process:
             if self.res==50 and self.custom_chrom_size==False:
                 types.append(np.loadtxt(self.types_path+'/chr'+str(chr)+'_beads.txt.original',delimiter=' ',dtype=str)[:,1])
             else:
-                tmp=list(np.loadtxt(self.types_path+'/chr'+str(chr)+'_beads.txt.original',delimiter=' ',dtype=str))
+                tmp=list(np.loadtxt(self.types_path+'/chr'+str(chr)+'_beads.txt.original',delimiter=' ',dtype=str)[:,1])
                 if len(tmp) < self.ref_chrm_size[chr-1]:
                     diff=self.ref_chrm_size[chr-1] - len(tmp)
                     for i in range( diff ):

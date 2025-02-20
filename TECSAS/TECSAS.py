@@ -792,10 +792,7 @@ class data_process:
                         tmp.append('NA')
                 types.append(tmp)
         types=np.concatenate(types)
-        if self.res==50 and self.custom_chrom_size==False:
-            int_types=np.array(list(map(self.TYPE_TO_INT.get, types)))
-        else:
-            int_types=types
+        int_types=np.array(list(map(self.TYPE_TO_INT.get, types)))
         #Check which experiments are available to train 
         if unique_file==None:
             unique=np.loadtxt(self.cell_line_path+'/unique_exp.txt',dtype=str)

@@ -73,6 +73,7 @@ class data_process:
             self.ref_chrm_size = np.array([4990,4865,3964,3828,3620,3424,3184,2931,2826,2712,2703,2679,2307,2148,2052,1810,1626,1564,1184,1262,964,1028,1028])*50/self.res
             self.ref_chrm_size = np.round(self.ref_chrm_size+0.1).astype(int)
         else:
+            print('Custom N of loci per chromosome: \n',ref_chrm_size)
             self.ref_chrm_size = ref_chrm_size
         if require_ENCODE==True:
             #Retrieves the available experiments on GM12878-hg19 to assess the download of experiments on the target cell

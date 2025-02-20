@@ -72,9 +72,11 @@ class data_process:
         if ref_chrm_size == None:
             self.ref_chrm_size = np.array([4990,4865,3964,3828,3620,3424,3184,2931,2826,2712,2703,2679,2307,2148,2052,1810,1626,1564,1184,1262,964,1028,1028])*50/self.res
             self.ref_chrm_size = np.round(self.ref_chrm_size+0.1).astype(int)
+            self.custom_chrom_size = False
         else:
             print('Custom N of loci per chromosome: \n',ref_chrm_size)
             self.ref_chrm_size = ref_chrm_size
+            self.custom_chrom_size = True
         if require_ENCODE==True:
             #Retrieves the available experiments on GM12878-hg19 to assess the download of experiments on the target cell
             #Prepare url to request information
@@ -773,10 +775,8 @@ class data_process:
         #Load types from Rao et al 2014 paper
         types=[]
         for chr in chrms:
-            if self.res==50:
+            if self.res==50 and self.custom_chrom_size==False:
                 types.append(np.loadtxt(self.types_path+'/chr'+str(chr)+'_beads.txt.original',delimiter=' ',dtype=str)[:,1])
-            elif self.res==100:
-                types.append(np.loadtxt(self.types_path+'/chr'+str(chr)+'_beads.txt.original',delimiter=' ',dtype=str)[::int(self.res/50),1])
             else:
                 tmp=list(np.loadtxt(self.types_path+'/chr'+str(chr)+'_beads.txt.original',delimiter=' ',dtype=str))
                 if len(tmp) < self.ref_chrm_size[chr-1]:

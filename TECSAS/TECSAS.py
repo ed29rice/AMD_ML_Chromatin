@@ -761,7 +761,7 @@ class data_process:
         #Stack shifted tracks and subtypes labels
         all_averages=np.vstack((int_types,shift_2,shift_1,all_averages,shift1,shift2))
         #To train, we exclude the NA and B4 subcompartments
-        if self.ref_chrm_size == None:
+        if self.custom_chrom_size == None:
             ndx=(all_averages[0,:]!=-1) * (all_averages[0,:]!=5)
         else:
             ndx=(all_averages[0,:]!=-1)

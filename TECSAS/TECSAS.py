@@ -989,7 +989,7 @@ class data_process:
         test_data=torch.tensor(test_set.astype(float))
         return test_data
 
-class PositionalEncoding_old(nn.Module):
+class PositionalEncoding(nn.Module):
 
     def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
         super().__init__()
@@ -1010,7 +1010,7 @@ class PositionalEncoding_old(nn.Module):
         x = x + self.pe[:,:x.size(1)]
         return self.dropout(x)
 
-class PositionalEncoding(nn.Module):
+class PositionalEncoding_old(nn.Module):
 
     def __init__(self, d_model, dropout=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
